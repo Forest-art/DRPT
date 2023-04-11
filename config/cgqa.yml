@@ -1,0 +1,34 @@
+model:
+  prompt_template: "a photo of x x"
+  clip_model: "ViT-L/14"
+  res_w: 0.8
+  
+train:
+  dataset: cgqa
+  dataset_path: "../../../dataset/cgqa"
+  lr: 0.00005
+  dropout: 0.3
+  weight_decay: 0.00001
+  context_length: 8
+  train_batch_size: 128
+  gradient_accumulation_steps: 2
+  seed: 0
+  epochs: 30
+  epoch_start: 0
+  epoch_round: 5
+  ent_weight: False
+  update: False
+  save_path: data/model/cgqa/drpt
+  best_model_metric: best_loss     #best_unseen  best_seen AUC best_loss best_hm
+  load_model: False     # False or model path
+  log_id: "This is the training process of drpt"
+
+test:
+  eval_batch_size: 64
+  open_world: False
+  topk: 1
+  text_encoder_batch_size: 36
+  threshold: 0.4
+  threshold_trials: 50
+  bias: 0.001
+  load_model:  data/model/cgqa/dfsp/drpt_best.pt    # False or model path

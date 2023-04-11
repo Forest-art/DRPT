@@ -1,0 +1,37 @@
+model:
+  prompt_template: "a photo of x x"
+  clip_model: "ViT-L/14"
+  res_w: 0.8
+  width_img: 1024
+  width_txt: 768
+
+train:
+  dataset: mit-states
+  dataset_path: "../../../dataset/mit-states"
+  lr: 0.0001
+  dropout: 0.3
+  weight_decay: 0.00001
+  context_length: 8
+  train_batch_size: 128
+  gradient_accumulation_steps: 2
+  seed: 0
+  epochs: 50
+  epoch_start: 0
+  epoch_round: 15
+  ent_weight: True
+  update: True
+  save_path: data/model/mit-states/drpt
+  # load_model: True
+  best_model_metric: best_loss     #best_unseen  best_seen AUC best_loss best_hm
+  log_id: "This is the training process of drpt"
+
+
+test:
+  eval_batch_size: 128
+  open_world: False
+  topk: 1
+  text_encoder_batch_size: 36
+  threshold: 0.4
+  threshold_trials: 50
+  bias: 0.001
+  load_model:  data/model/mit-states/drpt/drpt_best.pt    # False or model path

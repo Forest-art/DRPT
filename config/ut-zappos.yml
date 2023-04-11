@@ -1,0 +1,37 @@
+model:
+  prompt_template: "a photo of x x"
+  clip_model: "ViT-L/14"
+  res_w: 0.5
+  width_img: 1024
+  width_txt: 768
+
+train:
+  dataset: ut-zappos
+  dataset_path: "../../../dataset/ut-zappos"
+  lr: 0.0005
+  dropout: 0.3
+  weight_decay: 0.00001
+  context_length: 8
+  train_batch_size: 128
+  gradient_accumulation_steps: 2
+  seed: 0
+  epochs: 30
+  epoch_start: 0
+  epoch_round: 3
+  ent_weight: False
+  update: False
+  save_path: data/model/ut-zappos/drpt
+  best_model_metric: best_loss     #best_unseen  best_seen AUC best_loss best_hm
+  save_model: True
+  load_model: False     # False or model path
+  log_id: "This is the training process of drpt"
+
+test:
+  eval_batch_size: 32
+  open_world: False
+  load_model: "./data/model/ut-zappos/drpt/drpt_best.pt"
+  topk: 1
+  text_encoder_batch_size: 36
+  threshold: 0.4
+  threshold_trials: 50
+  bias: 0.001
