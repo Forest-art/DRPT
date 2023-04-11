@@ -1,5 +1,4 @@
-# Decomposed Fusion with Soft Prompt (DFSP)
-DFSP is a model which decomposes the prompt language feature into state feature and object feature, then fuses them with image feature to improve the response for state and object respectively.
+# Disentangled and Recurrent Prompt Tunning (DRPT)
 
 
 ## Setup
