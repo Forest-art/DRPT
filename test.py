@@ -74,11 +74,7 @@ class Evaluator:
             key = (dset.attr2idx[attr], dset.obj2idx[obj])
             self.test_pair_dict[key] = [pair_val, 0, 0]
 
-        # open world
-        if dset.open_world:
-            masks = [1 for _ in dset.pairs]
-        else:
-            masks = [1 if pair in test_pair_set else 0 for pair in dset.pairs]
+        masks = [1 if pair in test_pair_set else 0 for pair in dset.pairs]
 
         # masks = [1 if pair in test_pair_set else 0 for pair in dset.pairs]
 
@@ -538,14 +534,12 @@ if __name__ == "__main__":
     print('loading validation dataset')
     val_dataset = CompositionDataset(dataset_path,
                                      phase='val',
-                                     split='compositional-split-natural',
-                                     open_world=config.open_world)
+                                     split='compositional-split-natural')
 
     print('loading test dataset')
     test_dataset = CompositionDataset(dataset_path,
                                       phase='test',
-                                      split='compositional-split-natural',
-                                      open_world=config.open_world)
+                                      split='compositional-split-natural')
 
     allattrs = val_dataset.attrs
     allobj = val_dataset.objs
@@ -554,91 +548,34 @@ if __name__ == "__main__":
     offset = len(attributes)
     ent_attr, ent_obj = test_dataset.ent_attr, test_dataset.ent_obj
 
-    model = ZZSP(config, attributes=attributes, classes=classes, offset=offset, ent_attr=ent_attr, ent_obj=ent_obj).cuda()
+    model = DRPT(config, attributes=attributes, classes=classes, offset=offset, ent_attr=ent_attr, ent_obj=ent_obj).cuda()
     model.load_state_dict(torch.load(config.load_model))
 
     print('evaluating on the validation set')
-    if config.open_world and config.threshold is None:
-        evaluator = Evaluator(val_dataset, model=None)
-        feasibility_path = os.path.join(
-            DIR_PATH, f'data/feasibility_{config.dataset}.pt')
-        unseen_scores = torch.load(
-            feasibility_path,
-            map_location='cpu')['feasibility']
-        seen_mask = val_dataset.seen_mask.to('cpu')
-        min_feasibility = (unseen_scores + seen_mask * 10.).min()
-        max_feasibility = (unseen_scores - seen_mask * 10.).max()
-        thresholds = np.linspace(
-            min_feasibility,
-            max_feasibility,
-            num=config.threshold_trials)
-        best_auc = 0.
-        best_th = -10
-        val_stats = None
-        with torch.no_grad():
-            all_logits, all_attr_gt, all_obj_gt, all_pair_gt, loss_avg = predict_logits(
-                model, val_dataset, device, config)
-            for th in thresholds:
-                temp_logits = threshold_with_feasibility(
-                    all_logits, val_dataset.seen_mask, threshold=th, feasiblity=unseen_scores)
-                results = test(
-                    val_dataset,
-                    evaluator,
-                    temp_logits,
-                    all_attr_gt,
-                    all_obj_gt,
-                    all_pair_gt,
-                    config
-                )
-                auc = results['AUC']
-                if auc > best_auc:
-                    best_auc = auc
-                    best_th = th
-                    print('New best AUC', best_auc)
-                    print('Threshold', best_th)
-                    val_stats = copy.deepcopy(results)
-    else:
-        best_th = config.threshold
-        evaluator = Evaluator(val_dataset, model=None)
-        feasibility_path = os.path.join(
-            DIR_PATH, f'data/feasibility_{config.dataset}.pt')
-        unseen_scores = torch.load(
-            feasibility_path,
-            map_location='cpu')['feasibility']
-        with torch.no_grad():
-            all_logits, all_attr_gt, all_obj_gt, all_pair_gt, loss_avg = predict_logits(
-                model, val_dataset, config)
-            if config.open_world:
-                print('using threshold: ', best_th)
-                all_logits = threshold_with_feasibility(
-                    all_logits, val_dataset.seen_mask, threshold=best_th, feasiblity=unseen_scores)
-            results = test(
-                val_dataset,
-                evaluator,
-                all_logits,
-                all_attr_gt,
-                all_obj_gt,
-                all_pair_gt,
-                config
-            )
-        val_stats = copy.deepcopy(results)
-        result = ""
-        for key in val_stats:
-            result = result + key + "  " + str(round(val_stats[key], 4)) + "| "
-        print(result)
+    evaluator = Evaluator(val_dataset, model=None)
+    with torch.no_grad():
+        all_logits, all_attr_gt, all_obj_gt, all_pair_gt, loss_avg = predict_logits(
+            model, val_dataset, config)
+        results = test(
+            val_dataset,
+            evaluator,
+            all_logits,
+            all_attr_gt,
+            all_obj_gt,
+            all_pair_gt,
+            config
+        )
+    val_stats = copy.deepcopy(results)
+    result = ""
+    for key in val_stats:
+        result = result + key + "  " + str(round(val_stats[key], 4)) + "| "
+    print(result)
 
     print('evaluating on the test set')
     with torch.no_grad():
         evaluator = Evaluator(test_dataset, model=None)
         all_logits, all_attr_gt, all_obj_gt, all_pair_gt, loss_avg = predict_logits(
             model, test_dataset, config)
-        if config.open_world and best_th is not None:
-            print('using threshold: ', best_th)
-            all_logits = threshold_with_feasibility(
-                all_logits,
-                test_dataset.seen_mask,
-                threshold=best_th,
-                feasiblity=unseen_scores)
         test_stats = test(
             test_dataset,
             evaluator,
@@ -660,13 +597,7 @@ if __name__ == "__main__":
         'test': test_stats,
     }
 
-    if best_th is not None:
-        results['best_threshold'] = best_th
-
-    if config.open_world:
-        result_path = config.load_model[:-2] + "open.calibrated.json"
-    else:
-        result_path = config.load_model[:-2] + "closed.json"
+    result_path = config.load_model[:-2] + "drpt_test.json"
 
     with open(result_path, 'w+') as fp:
         json.dump(results, fp)

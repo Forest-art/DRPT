@@ -30,10 +30,6 @@ train:
 
 test:
   eval_batch_size: 256
-  open_world: True
-  load_model: "./data/model/uaoclevr/drpt/drpt_best.pt"
+  load_model: "./data/model/uaoclevr/drpt/best.pt"
   topk: 1
   text_encoder_batch_size: 36
-  threshold: 0.4
-  threshold_trials: 50
-  bias: 0.001

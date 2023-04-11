@@ -81,13 +81,11 @@ class CompositionDataset(Dataset):
             root,
             phase,
             split='compositional-split-natural',
-            open_world=False,
             imagenet=False
     ):
         self.root = root
         self.phase = phase
         self.split = split
-        self.open_world = open_world
 
         self.train_data_index = {}
         self.all_data_index = {}
@@ -102,8 +100,6 @@ class CompositionDataset(Dataset):
                 self.test_pairs = self.parse_split()
         self.ent_attr, self.ent_obj = self.get_entanglement()
 
-        if self.open_world:
-            self.pairs = list(product(self.attrs, self.objs))
         for pair in self.train_pairs:
             self.train_data_index[pair] = []
         for pair in self.pairs:
@@ -131,20 +127,6 @@ class CompositionDataset(Dataset):
             [(pair, idx) for idx, pair in enumerate(self.train_pairs)]
         )
 
-        if self.open_world:
-            mask = [1 if pair in set(self.train_pairs) else 0 for pair in self.pairs]
-            self.seen_mask = torch.BoolTensor(mask) * 1.
-
-            self.obj_by_attrs_train = {k: [] for k in self.attrs}
-            for (a, o) in self.train_pairs:
-                self.obj_by_attrs_train[a].append(o)
-
-            # Intantiate attribut-object relations, needed just to evaluate mined pairs
-            self.attrs_by_obj_train = {k: [] for k in self.objs}
-            for (a, o) in self.train_pairs:
-                self.attrs_by_obj_train[o].append(a)
-
-        # print(len(self.attrs), len(self.objs))
 
 
     def get_entanglement(self):

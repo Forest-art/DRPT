@@ -18,44 +18,19 @@ sh download_data.sh
 ```
 
 If you already have setup the datasets, you can use symlink and ensure the following paths exist:
-`data/<dataset>` where `<datasets> = {'mit-states', 'ut-zappos', 'cgqa'}`.
+`data/<dataset>` where `<datasets> = {'mit-states', 'ut-zappos', 'cgqa', 'clevr'}`.
 
 
 ## Training
 ```
 python -u train.py --dataset <dataset>
 ```
-## Evaluation
-We evaluate our models in two settings: closed-world and open-world.
 
-### Closed-World Evaluation
+### Evaluation
 ```
 python -u test.py --dataset <dataset>
 ```
-You can replace `--dataset` with `{mit-states, ut-zappos, cgqa}`.
-
-
-### Open-World Evaluation
-For our open-world evaluation, we compute the feasbility calibration and then evaluate on the dataset.
-
-### Feasibility Calibration
-We use GloVe embeddings to compute the similarities between objects and attributes.
-Download the GloVe embeddings in the `data` directory:
-
-```
-cd data
-wget https://nlp.stanford.edu/data/glove.6B.zip
-```
-Move `glove.6B.300d.txt` into `data/glove.6B.300d.txt`.
-
-To compute feasibility calibration for each dataset, run the following command:
-```
-python -u feasibility.py --dataset mit-states
-```
-The feasibility similarities are saved at `data/feasibility_<dataset>.pt`.
-
-To run, just edit the open-world parameter in config/<dataset>.yml
-
+You can replace `--dataset` with `{mit-states, ut-zappos, cgqa, clevr}`.
 
 
 ## References
