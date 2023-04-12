@@ -18,8 +18,8 @@ train:
   epochs: 30
   epoch_start: 0
   epoch_round: 3
-  ent_weight: False
-  update: False
+  ent_weight: True
+  update: True
   save_path: data/model/ut-zappos/drpt
   best_model_metric: best_loss     #best_unseen  best_seen AUC best_loss best_hm
   save_model: True
@@ -28,6 +28,6 @@ train:
 
 test:
   eval_batch_size: 32
-  load_model: "./data/model/ut-zappos/drpt/best.pt"
+  load_model: "./data/model/ut-zappos/drpt/drpt_best.pt"
   topk: 1
   text_encoder_batch_size: 36

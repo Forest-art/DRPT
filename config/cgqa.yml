@@ -18,7 +18,7 @@ train:
   epoch_round: 5
   ent_weight: False
   update: False
-  save_path: data/model/cgqa/drpt
+  save_path: data/model/cgqa/csp
   best_model_metric: best_loss     #best_unseen  best_seen AUC best_loss best_hm
   load_model: False     # False or model path
   log_id: "This is the training process of drpt"

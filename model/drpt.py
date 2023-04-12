@@ -11,7 +11,6 @@ from clip_modules.model_loader import load
 from model.common import *
 from torch.nn.modules.loss import CrossEntropyLoss
 import numpy as np
-from visualazition import *
 
 
 class DRPT(nn.Module):
@@ -144,7 +143,7 @@ class DRPT(nn.Module):
         ent_weight = w_att[att_idx] * w_obj[obj_idx]
         ent_weight = ent_weight / ent_weight.max()
         # print(ent_weight)
-        return 2 - 1 *  ent_weight
+        return 1 +  2 * (1 - ent_weight)
 
 
     def update_status(self, epoch):
@@ -193,7 +192,7 @@ class DRPT(nn.Module):
             loss_reg = 0
 
         # loss = self.loss_fn(logits, batch_target)
-        if self.config.ent_weight == True:
+        if self.config.ent_weight == True and self.train_status == "state+object":
             loss = F.cross_entropy(logits, batch_target, weight=ent_weight) + 0 * loss_reg
         else:
             loss = F.cross_entropy(logits, batch_target) + 0 * loss_reg

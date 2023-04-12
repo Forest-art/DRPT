@@ -13,7 +13,6 @@ import torch.nn.functional as F
 from model.drpt import DRPT
 from parameters import parser, YML_PATH
 from loss import loss_calu
-from visualazition import Comp_SNE
 
 # from test import *
 import test as test
