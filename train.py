@@ -72,15 +72,15 @@ def train_model(model, optimizer, config, train_dataset, val_dataset, test_datas
 
         if (i + 1) % config.save_every_n == 0:
             torch.save(model.state_dict(), os.path.join(config.save_path, f"epoch_{i}.pt"))
+        if config.update == True:
+            model.update_status(i)
 
-        # if i < 10:
-        #     continue
+        if i < config.jump_epoch:
+            continue
 
         print("Evaluating val dataset:")
         logging.info("Evaluating val dataset:")
         loss_avg, val_result = evaluate(model, val_dataset)
-        if config.update == True:
-            model.update_status(i)
         print("Now status is {}".format(model.train_status))
         logging.info("Now status is {}".format(model.train_status))
 
@@ -139,71 +139,6 @@ def evaluate(model, dataset):
 
 
 
-def test_model(model, dataset, epoch):
-    model.eval()
-    evaluator = test.Evaluator(dataset, model=None)
-    all_attr_gt, all_obj_gt, all_pair_gt = (
-        [],
-        [],
-        [],
-    )
-    attr2idx = dataset.attr2idx
-    obj2idx = dataset.obj2idx
-    pairs_dataset = dataset.pairs
-    pairs = torch.tensor([(attr2idx[attr], obj2idx[obj])
-                                for attr, obj in pairs_dataset]).cuda()
-    dataloader = DataLoader(
-        dataset,
-        batch_size=config.eval_batch_size,
-        shuffle=False)
-    all_logits = torch.Tensor()
-    all_pred = torch.Tensor()
-    all_obj_pred = torch.Tensor()
-    all_com_pred = torch.Tensor()
-    with torch.no_grad():
-        for idx, data in enumerate(dataloader):
-            # if idx > 10:
-            #     break
-            predict, l = model(data, pairs, epoch, "test")
-            logits = predict
-            attr_truth, obj_truth, pair_truth = data[1], data[2], data[3]
-            logits = logits.type(torch.float32).cpu()
-            predict = logits.topk(1, dim=1)[1].squeeze()
-            all_pred = torch.cat([all_pred, predict], dim=0)
-            all_attr_gt.append(attr_truth)
-            all_obj_gt.append(obj_truth)
-            all_pair_gt.append(pair_truth)
-
-    all_attr_gt, all_obj_gt, all_pair_gt = (
-        torch.cat(all_attr_gt).to("cpu"),
-        torch.cat(all_obj_gt).to("cpu"),
-        torch.cat(all_pair_gt).to("cpu"),
-    )
-    if epoch%3 == 0:
-        obj_acc = len(all_pred[all_pred==all_obj_gt]) / len(all_pred)
-        print("Test attribute accuracy: ", 0, "Test object accuracy: ", obj_acc)
-    else:
-        attr_acc = len(all_pred[all_pred==all_attr_gt]) / len(all_pred)
-        print("Test attribute accuracy: ", attr_acc, "Test object accuracy: ", attr_acc)
-    # test_stats = test.test(
-    #             dataset,
-    #             evaluator,
-    #             all_logits,
-    #             all_attr_gt,
-    #             all_obj_gt,
-    #             all_pair_gt,
-    #             config)
-    # result = ""
-    # key_set = ["best_seen", "best_unseen", "AUC", "best_hm", "attr_acc", "obj_acc"]
-    # for key in test_stats:
-    #     if key in key_set:
-    #         result = result + key + "  " + str(round(test_stats[key], 4)) + "| "
-    # print(result)   
-    model.train()
-
-
-
-
 if __name__ == "__main__":
     config = parser.parse_args()
     set_log("logs/" + config.dataset + ".log")
@@ -239,16 +174,9 @@ if __name__ == "__main__":
 
     model = DRPT(config, attributes=attributes, classes=classes, offset=offset, ent_attr=ent_attr, ent_obj=ent_obj).cuda()
     
-    # Comp_SNE(model.soft_att_obj['obj'])
-
-    ## Group the parameters into two sets
-    # params_att = [{'params': model.soft_att_dict[key], 'lr': 0.0005} for key in model.soft_att_dict]
-    # params_obj = [{'params': model.soft_obj_dict[key], 'lr': 0.0005} for key in model.soft_obj_dict]
-    # params = params_att + params_obj
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
 
-    # if config.load_model is not False:
-    #     model.load_state_dict(torch.load(config.load_model))
+    # model.load_state_dict(torch.load(config.load_model))
 
     os.makedirs(config.save_path, exist_ok=True)
 

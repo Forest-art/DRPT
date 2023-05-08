@@ -212,7 +212,7 @@ class CompositionDataset(Dataset):
             ]
         else:
             data = [
-                img, self.attr2idx[attr], self.obj2idx[obj], self.pair2idx[(attr, obj)]
+                img, self.attr2idx[attr], self.obj2idx[obj], self.pair2idx[(attr, obj)], image
             ]
 
         return data

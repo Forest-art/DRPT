@@ -14,6 +14,8 @@ from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 import cv2
 
+from plot_utils.qualitative_re import quali_result
+from plot_utils.ent import analy_ent
 from utils import *
 from loss import loss_calu
 from parameters import parser, YML_PATH
@@ -355,6 +357,9 @@ class Evaluator:
             bias_term = 1e3
         else:
             bias_term = biaslist[idx]
+
+        # print(seen_accuracy, unseen_accuracy)
+
         stats["biasterm"] = float(bias_term)
         stats["best_unseen"] = np.max(unseen_accuracy)
         stats["best_seen"] = np.max(seen_accuracy)
@@ -411,8 +416,9 @@ def predict_logits(model, dataset, config):
             predict, l = model(data, pairs)
             logits = predict
             loss += l
-            attr_truth, obj_truth, pair_truth = data[1], data[2], data[3]
+            attr_truth, obj_truth, pair_truth, image_path = data[1], data[2], data[3], data[4]
             logits = logits.cpu()
+            # quali_result(logits, data, pairs_dataset)
             all_logits = torch.cat([all_logits, logits], dim=0)
             all_attr_gt.append(attr_truth)
             all_obj_gt.append(obj_truth)
@@ -423,6 +429,7 @@ def predict_logits(model, dataset, config):
         torch.cat(all_obj_gt).to("cpu"),
         torch.cat(all_pair_gt).to("cpu"),
     )
+    # analy_ent(all_logits, all_pair_gt, pairs_dataset)
 
     return all_logits, all_attr_gt, all_obj_gt, all_pair_gt, loss / len(dataloader)
 
@@ -551,25 +558,25 @@ if __name__ == "__main__":
     model = DRPT(config, attributes=attributes, classes=classes, offset=offset, ent_attr=ent_attr, ent_obj=ent_obj).cuda()
     model.load_state_dict(torch.load(config.load_model))
 
-    print('evaluating on the validation set')
-    evaluator = Evaluator(val_dataset, model=None)
-    with torch.no_grad():
-        all_logits, all_attr_gt, all_obj_gt, all_pair_gt, loss_avg = predict_logits(
-            model, val_dataset, config)
-        results = test(
-            val_dataset,
-            evaluator,
-            all_logits,
-            all_attr_gt,
-            all_obj_gt,
-            all_pair_gt,
-            config
-        )
-    val_stats = copy.deepcopy(results)
-    result = ""
-    for key in val_stats:
-        result = result + key + "  " + str(round(val_stats[key], 4)) + "| "
-    print(result)
+    # print('evaluating on the validation set')
+    # evaluator = Evaluator(val_dataset, model=None)
+    # with torch.no_grad():
+    #     all_logits, all_attr_gt, all_obj_gt, all_pair_gt, loss_avg = predict_logits(
+    #         model, val_dataset, config)
+    #     results = test(
+    #         val_dataset,
+    #         evaluator,
+    #         all_logits,
+    #         all_attr_gt,
+    #         all_obj_gt,
+    #         all_pair_gt,
+    #         config
+    #     )
+    # val_stats = copy.deepcopy(results)
+    # result = ""
+    # for key in val_stats:
+    #     result = result + key + "  " + str(round(val_stats[key], 4)) + "| "
+    # print(result)
 
     print('evaluating on the test set')
     with torch.no_grad():
@@ -593,7 +600,7 @@ if __name__ == "__main__":
         print(result)
 
     results = {
-        'val': val_stats,
+        # 'val': val_stats,
         'test': test_stats,
     }
 

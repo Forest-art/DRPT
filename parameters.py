@@ -6,7 +6,9 @@ YML_PATH = {
     "mit-states": './config/mit-states.yml',
     "ut-zappos": './config/ut-zappos.yml',
     "cgqa": './config/cgqa.yml',
-    "aoclevr": './config/aoclevr.yml'
+    "aoclevr": './config/aoclevr.yml',
+    "clothing": './config/clothing.yml',
+    "vaw-czsl": './config/vaw-czsl.yml'
 }
 
 
@@ -28,5 +30,8 @@ parser.add_argument("--load_model", default=None, help="load the trained model")
 parser.add_argument("--seed", help="seed value", default=0, type=int)
 parser.add_argument("--gradient_accumulation_steps", help="number of gradient accumulation steps", default=1, type=int)
 
+parser.add_argument("--bias", help="eval bias", type=float, default=1e3)
 parser.add_argument("--topk", help="eval topk", type=int, default=1)
 parser.add_argument("--text_encoder_batch_size", help="batch size of the text encoder", default=16, type=int)
+parser.add_argument('--threshold', type=float, help="optional threshold")
+parser.add_argument('--threshold_trials', type=int, default=50, help="how many threshold values to try")

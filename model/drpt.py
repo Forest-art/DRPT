@@ -23,13 +23,13 @@ class DRPT(nn.Module):
         self.classes = classes
         self.dtype = torch.float16
         self.dropout = nn.Dropout(config.dropout)
-        self.ent_attr = torch.Tensor(list(ent_attr.values()))
-        self.ent_obj = torch.Tensor(list(ent_obj.values()))
+        self.ent_attr = torch.Tensor(list(ent_attr.values())).cuda()
+        self.ent_obj = torch.Tensor(list(ent_obj.values())).cuda()
         self.avg_ent_att, self.avg_ent_obj = self.ent_attr.mean(), self.ent_obj.mean()
         self.token_ids, self.soft_att, self.soft_obj, self.soft_prompt = self.construct_soft_prompt()
         self.offset = offset
         self.enable_pos_emb = True
-        self.train_status = "state+object"      ###status in ["object", "state", "object+state"]
+        self.train_status = "object"      ###status in ["object", "state", "object+state"]
         self.text_encoder = CustomTextEncoder(self.clip, self.dtype, self.attributes, self.classes)
         for p in self.parameters():
             p.requires_grad=False
@@ -39,7 +39,7 @@ class DRPT(nn.Module):
         self.soft_att_fix = self.soft_att_obj['att'].detach().cuda()
         self.soft_obj_fix = self.soft_att_obj['obj'].detach().cuda()
         if self.config.update==True:
-            self.update_status(0)
+            self.update_status(self.config.epoch_start)
 
 
     def decompose_attr_obj(self):
@@ -127,24 +127,21 @@ class DRPT(nn.Module):
         x = self.clip.visual.ln_post(x[:, 0, :])
         if self.clip.visual.proj is not None:
             x = x @ self.clip.visual.proj
-
-        # x_mlp = self.mlp(x.type(torch.float)).type(self.clip.dtype)
-        # x = self.weight * x + (1 - self.weight) * x_mlp
-
         normalized_x = x / x.norm(dim=-1, keepdim=True)
         return normalized_x
 
 
+
     def ent_weight(self, idx):
         att_idx, obj_idx = idx[:, 0].cpu().numpy(), idx[:, 1].cpu().numpy()
-        w_att = self.ent_attr
-        w_obj = self.ent_obj
+        w_att = torch.abs(self.ent_attr - self.avg_ent_att)
+        w_obj = torch.abs(self.ent_obj - self.avg_ent_obj)
         ent_weight = torch.zeros(len(idx))
         ent_weight = w_att[att_idx] * w_obj[obj_idx]
         ent_weight = ent_weight / ent_weight.max()
-        # print(ent_weight)
-        return 1 +  2 * (1 - ent_weight)
-
+        if self.config.dataset != "cgqa":
+            return 1 +  self.config.ent_w * (1 - ent_weight)
+        return 1 + self.config.ent_w * ent_weight
 
     def update_status(self, epoch):
         if epoch // self.config.epoch_round % 3 == 0:
@@ -170,7 +167,7 @@ class DRPT(nn.Module):
 
 
     def forward(self, batch, idx):
-        batch_img, batch_attr, batch_obj, batch_target = batch
+        batch_img, batch_attr, batch_obj, batch_target = batch[0], batch[1], batch[2], batch[3]
         batch_img, batch_attr, batch_obj, batch_target = batch_img.cuda(), batch_attr.cuda(), batch_obj.cuda(), batch_target.cuda()
         b = batch_img.shape[0]
 
@@ -185,17 +182,10 @@ class DRPT(nn.Module):
         #### Compute Logits and loss
         logits = self.clip.logit_scale.exp() * batch_img @ text_features.t()  
 
-        loss_reg = 0
-        if self.train_status == "state+object":
-            loss_reg = (self.soft_att_fix - self.soft_att_obj['att']).norm(p=1) + (self.soft_obj_fix - self.soft_att_obj['obj']).norm(p=1)
-        else:
-            loss_reg = 0
-
         # loss = self.loss_fn(logits, batch_target)
-        if self.config.ent_weight == True and self.train_status == "state+object":
-            loss = F.cross_entropy(logits, batch_target, weight=ent_weight) + 0 * loss_reg
+        if self.config.ent_weight == True:
+            loss = F.cross_entropy(logits, batch_target, weight=ent_weight)
         else:
-            loss = F.cross_entropy(logits, batch_target) + 0 * loss_reg
-
+            loss = F.cross_entropy(logits, batch_target)
 
         return logits, loss

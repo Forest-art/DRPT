@@ -1,7 +1,6 @@
 model:
   prompt_template: "a photo of x x"
   clip_model: "ViT-L/14"
-  res_w: 0.8
   width_img: 1024
   width_txt: 768
 
